@@ -1,0 +1,16 @@
+# Streamlit secrets
+.streamlit/
+
+# Python virtual environment
+venv/
+env/
+.env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database (optional: if you want to keep the DB local only, uncomment this. 
+# But since you are deploying, you probably want the DB in the repo unless you generate it on the fly)
+# gamelogs.db
