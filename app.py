@@ -7,33 +7,37 @@ from st_aggrid.grid_options_builder import GridOptionsBuilder
 # Configure Streamlit layout to use the full browser width
 st.set_page_config(layout='wide')
 
+import logger
+
 def check_password():
     """Returns `True` if the user had the correct password."""
 
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if st.session_state["password"] == st.secrets["password"]:
+        user = st.session_state.get("username_input", "")
+        pwd = st.session_state.get("password_input", "")
+        
+        if "users" in st.secrets and user in st.secrets["users"] and st.secrets["users"][user] == pwd:
             st.session_state["password_correct"] = True
-            del st.session_state["password"]  # don't store password
+            del st.session_state["password_input"]  # don't store password
+            # Log the login
+            logger.log_login(user)
         else:
             st.session_state["password_correct"] = False
 
-    if "password_correct" not in st.session_state:
-        # First run, show input for password.
-        st.text_input(
-            "Password", type="password", on_change=password_entered, key="password"
-        )
-        return False
-    elif not st.session_state["password_correct"]:
-        # Password not correct, show input + error.
-        st.text_input(
-            "Password", type="password", on_change=password_entered, key="password"
-        )
-        st.error("😕 Password incorrect")
-        return False
-    else:
-        # Password correct.
+    if st.session_state.get("password_correct", False):
         return True
+
+    # Show inputs
+    st.text_input("Username", key="username_input")
+    st.text_input(
+        "Password", type="password", on_change=password_entered, key="password_input"
+    )
+    
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        st.error("😕 User not found or password incorrect")
+        
+    return False
 
 if check_password():
     # Load gamelogs table from local SQLite database into a DataFrame
