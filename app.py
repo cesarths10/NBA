@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime
 from st_aggrid import AgGrid
 from st_aggrid.grid_options_builder import GridOptionsBuilder
+import os
+import sqlite3
 
 # Configure Streamlit layout to use the full browser width
 st.set_page_config(layout='wide')
@@ -41,10 +43,19 @@ def check_password():
 
 if check_password():
     # Load gamelogs table from local SQLite database into a DataFrame
-    import sqlite3
-    conn = sqlite3.connect('gamelogs.db')
-    df = pd.read_sql_query('SELECT * FROM gamelogs', conn)
-    conn.close()
+    DB_PATH = "gamelogs.db"
+
+    def db_mtime(path):
+        return os.path.getmtime(path) if os.path.exists(path) else 0
+
+    @st.cache_data
+    def load_gamelogs(db_path, mtime):
+        conn = sqlite3.connect(db_path)
+        df = pd.read_sql_query("SELECT * FROM gamelogs", conn)
+        conn.close()
+        return df
+
+    df = load_gamelogs(DB_PATH, db_mtime(DB_PATH))
 
 
     # Session state initialization and helper callbacks to manage progressive inputs
