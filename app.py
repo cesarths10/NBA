@@ -8,7 +8,7 @@ try:
     from st_aggrid.grid_options_builder import GridOptionsBuilder
     import os
     import sqlite3
-    import logger
+    import nba_logger as logger
 except ImportError as e:
     st.error(f"Import Error: {e}")
     st.stop()
