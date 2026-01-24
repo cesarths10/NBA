@@ -1,15 +1,22 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
-from st_aggrid import AgGrid
-from st_aggrid.grid_options_builder import GridOptionsBuilder
-import os
-import sqlite3
+import traceback
 
-# Configure Streamlit layout to use the full browser width
-st.set_page_config(layout='wide')
+try:
+    import pandas as pd
+    from datetime import datetime
+    from st_aggrid import AgGrid
+    from st_aggrid.grid_options_builder import GridOptionsBuilder
+    import os
+    import sqlite3
+    import logger
+except ImportError as e:
+    st.error(f"Import Error: {e}")
+    st.stop()
+except Exception as e:
+    st.error(f"Startup Error: {e}")
+    st.text(traceback.format_exc())
+    st.stop()
 
-import logger
 
 def check_password():
     """Returns `True` if the user had the correct password."""
