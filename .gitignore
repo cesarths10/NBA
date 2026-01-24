@@ -14,3 +14,4 @@ __pycache__/
 # Database (optional: if you want to keep the DB local only, uncomment this. 
 # But since you are deploying, you probably want the DB in the repo unless you generate it on the fly)
 # gamelogs.db
+login_log.txt
