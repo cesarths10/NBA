@@ -299,34 +299,6 @@ try:
                         results[stat] = None
                 return results
 
-            # Helper to get row-style for AgGrid JS (Select Player)
-            def make_getRowStyle_js():
-                inputs_str = ",".join([f"'{stat}': {stat_inputs[stat]}" for stat in stat_fields])
-                js = f"""
-                function(params) {{
-                  const fields = ['PTS','TPM','REB','AST','STL','BLK','TOV','P|R|A','P|A','P|R'];
-                  const inputs = {{{inputs_str}}};
-                  let hasFilter = false;
-                  let match = true;
-                  for (let i = 0; i < fields.length; i++) {{
-                    let stat = fields[i];
-                    if (inputs[stat] > 0) {{
-                      hasFilter = true;
-                      let val = params.data[stat];
-                      if (val === undefined || val === null || Number(val) < inputs[stat]) {{
-                        match = false;
-                        break;
-                      }}
-                    }}
-                  }}
-                  if (hasFilter && match) {{
-                    return {{ backgroundColor: '#b6fcb6' }};
-                  }}
-                  return {{}};
-                }}
-                """
-                return js
-
             # Render three tables with their percent summaries
             def render_table_with_summary(display_df_local, title):
                 st.markdown('---')
@@ -342,55 +314,37 @@ try:
                     # Display simplified label: 'STAT: X%'
                     percent_cols[i].markdown(f"**{stat}:** {percent_str}")
 
-                # Display table using AgGrid where possible, falling back to pandas styling
+                # Use native Streamlit styled dataframe to prevent AgGrid header scrolling separation bugs
                 try:
-                    gb = GridOptionsBuilder.from_dataframe(display_df_local)
-                    gb.configure_default_column(minWidth=80, cellStyle={'textAlign': 'left'}, headerClass='left-aligned-header')
-                    gb.configure_grid_options(getRowStyle=JsCode(make_getRowStyle_js()))
-                    grid_options = gb.build()
-                    row_height = 40
-                    n_rows = len(display_df_local)
-                    grid_height = min(2000, 60 + n_rows * row_height)
-                    AgGrid(
-                        display_df_local,
-                        gridOptions=grid_options,
-                        enable_enterprise_modules=False,
-                        theme='streamlit',
-                        allow_unsafe_jscode=True,
-                        update_on=[],
-                        height=grid_height,
-                        key=f"grid_player_{title.replace(' ', '_')}_{'_'.join(str(v) for v in stat_inputs.values())}"
-                    )
+                    def highlight_rows(s):
+                        highlight = []
+                        for idx, row in s.iterrows():
+                            row_highlight = True
+                            has_filter = False
+                            for stat in stat_fields:
+                                if stat_inputs[stat] > 0:
+                                    has_filter = True
+                                    if stat not in row or pd.isnull(row[stat]):
+                                        row_highlight = False
+                                        break
+                                    try:
+                                        if float(row[stat]) < stat_inputs[stat]:
+                                            row_highlight = False
+                                            break
+                                    except Exception:
+                                        row_highlight = False
+                                        break
+                            
+                            if not has_filter:
+                                row_highlight = False
+                            
+                            highlight.append('background-color: #b6fcb6' if row_highlight else '')
+                        return pd.DataFrame([highlight]*len(s.columns)).T
+                    
+                    styled = display_df_local.style.set_properties(**{'text-align': 'left'}).apply(lambda _: highlight_rows(display_df_local), axis=None)
+                    st.dataframe(styled, use_container_width=True, hide_index=True)
                 except Exception:
-                    try:
-                        def highlight_rows(s):
-                            highlight = []
-                            for idx, row in s.iterrows():
-                                row_highlight = True
-                                has_filter = False
-                                for stat in stat_fields:
-                                    if stat_inputs[stat] > 0:
-                                        has_filter = True
-                                        if stat not in row or pd.isnull(row[stat]):
-                                            row_highlight = False
-                                            break
-                                        try:
-                                            if float(row[stat]) < stat_inputs[stat]:
-                                                row_highlight = False
-                                                break
-                                        except Exception:
-                                            row_highlight = False
-                                            break
-                                
-                                if not has_filter:
-                                    row_highlight = False
-                                
-                                highlight.append('background-color: #b6fcb6' if row_highlight else '')
-                            return pd.DataFrame([highlight]*len(s.columns)).T
-                        styled = display_df_local.style.set_properties(**{'text-align': 'left'}).apply(lambda _: highlight_rows(display_df_local), axis=None)
-                        st.dataframe(styled, width='stretch')
-                    except Exception:
-                        st.dataframe(display_df_local, width='stretch')
+                    st.dataframe(display_df_local, use_container_width=True, hide_index=True)
 
             # Render logic for 'Select Stat'
             def render_stat_summary(df_all, players_base_df, n_games, title):
