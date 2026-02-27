@@ -301,7 +301,21 @@ try:
 
             # Helper to get row-style for AgGrid JS (Select Player)
             def make_getRowStyle_js():
-                js = "function(params) {\\n  const fields = ['PTS','TPM','REB','AST','STL','BLK','TOV','P|R|A','P|A','P|R'];\\n  const inputs = {" + ",".join([f"'{stat}': {stat_inputs[stat]}" for stat in stat_fields]) + "};\\n  for (let i = 0; i < fields.length; i++) {\\n    let stat = fields[i];\\n    let val = params.data[stat];\\n    if (inputs[stat] > 0 && val !== undefined && val !== null && Number(val) >= inputs[stat]) {\\n      return { backgroundColor: '#b6fcb6' };\\n    }\\n  }\\n  return {};\\n}"
+                inputs_str = ",".join([f"'{stat}': {stat_inputs[stat]}" for stat in stat_fields])
+                js = f"""
+                function(params) {{
+                  const fields = ['PTS','TPM','REB','AST','STL','BLK','TOV','P|R|A','P|A','P|R'];
+                  const inputs = {{{inputs_str}}};
+                  for (let i = 0; i < fields.length; i++) {{
+                    let stat = fields[i];
+                    let val = params.data[stat];
+                    if (inputs[stat] > 0 && val !== undefined && val !== null && Number(val) >= inputs[stat]) {{
+                      return {{ backgroundColor: '#b6fcb6' }};
+                    }}
+                  }}
+                  return {{}};
+                }}
+                """
                 return js
 
             # Render three tables with their percent summaries
@@ -336,6 +350,7 @@ try:
                         allow_unsafe_jscode=True,
                         update_on=[],
                         height=grid_height,
+                        key=f"grid_player_{title.replace(' ', '_')}_{'_'.join(str(v) for v in stat_inputs.values())}"
                     )
                 except Exception:
                     try:
