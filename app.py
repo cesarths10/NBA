@@ -3,6 +3,32 @@ import traceback
 
 st.set_page_config(layout="wide", page_title="NBA Player Game Logs")
 
+st.markdown("""
+<style>
+/* Streamlit Native Dataframes */
+[data-testid="stDataFrame"] th {
+    text-align: left !important;
+}
+[data-testid="stDataFrame"] td {
+    text-align: left !important;
+}
+
+/* AgGrid Dataframes */
+.ag-header-cell-label {
+    justify-content: flex-start !important;
+}
+.ag-right-aligned-header .ag-header-cell-label {
+    justify-content: flex-start !important;
+}
+.ag-right-aligned-cell {
+    text-align: left !important;
+}
+.ag-cell {
+    text-align: left !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 try:
     import pandas as pd
     from datetime import datetime
@@ -341,7 +367,7 @@ try:
                             highlight.append('background-color: #b6fcb6' if row_highlight else '')
                         return pd.DataFrame([highlight]*len(s.columns)).T
                     
-                    styled = display_df_local.style.set_properties(**{'text-align': 'left'}).apply(lambda _: highlight_rows(display_df_local), axis=None)
+                    styled = display_df_local.style.set_properties(**{'text-align': 'left'}).set_table_styles([dict(selector='th', props=[('text-align', 'left')])]).apply(lambda _: highlight_rows(display_df_local), axis=None)
                     st.dataframe(styled, use_container_width=True, hide_index=True)
                 except Exception:
                     st.dataframe(display_df_local, use_container_width=True, hide_index=True)
@@ -455,6 +481,8 @@ try:
                     """
                     gb = GridOptionsBuilder.from_dataframe(display_df)
                     gb.configure_default_column(minWidth=80, cellStyle={'textAlign': 'left'}, headerClass='left-aligned-header')
+                    for col in display_df.columns:
+                        gb.configure_column(col, type=[], cellStyle={'textAlign': 'left'})
                     gb.configure_grid_options(getRowStyle=JsCode(js_hot_streak))
                     gb.configure_selection(selection_mode="single", use_checkbox=False)
                     grid_options = gb.build()
