@@ -36,7 +36,6 @@ try:
     from st_aggrid.grid_options_builder import GridOptionsBuilder
     import os
     import sqlite3
-    import nba_logger as logger
 except ImportError as e:
     st.error(f"Import Error: {e}")
     st.stop()
@@ -61,7 +60,6 @@ def check_password():
     if submit:
         if "users" in st.secrets and user in st.secrets["users"] and st.secrets["users"][user] == pwd:
             st.session_state["password_correct"] = True
-            logger.log_login(user)
             st.rerun()
         else:
             st.session_state["password_correct"] = False
