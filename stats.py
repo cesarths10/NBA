@@ -108,9 +108,18 @@ def fetch_html_selenium(url: str, timeout: int = 30) -> str:
 def parse_gamelogs_table(html: str) -> pd.DataFrame:
     soup = BeautifulSoup(html, 'lxml')
 
-    table = soup.select_one('table[data-toggle="table"]')
+    table = soup.select_one('div.fixed-table-body table')
     if not table:
-        table = soup.find('table')
+        table = soup.select_one('table[data-toggle="table"]')
+    
+    if not table:
+        tables = soup.find_all('table')
+        if tables:
+            # find table with the most rows
+            table = max(tables, key=lambda t: len(t.find_all('tr')))
+        else:
+            table = None
+            
     if not table:
         return pd.DataFrame()
 
