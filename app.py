@@ -468,49 +468,25 @@ try:
                     return 'background-color: rgba(255, 165, 0, 0.3)' if isinstance(val, str) and '🔥' in val else ''
                 
                 try:
-                    # Aggrid is better, but row styling based on column value requires JS
-                    js_hot_streak = """
-                    function(params) {
-                      if (params.data.Player && params.data.Player.includes('🔥')) {
-                        return { backgroundColor: 'rgba(255,165,0,0.3)' };
-                      }
-                      return {};
-                    }
-                    """
-                    gb = GridOptionsBuilder.from_dataframe(display_df)
-                    gb.configure_default_column(minWidth=80, cellStyle={'textAlign': 'left'}, headerClass='left-aligned-header')
-                    for col in display_df.columns:
-                        gb.configure_column(col, type=[], cellStyle={'textAlign': 'left'})
-                    gb.configure_grid_options(getRowStyle=JsCode(js_hot_streak))
-                    gb.configure_selection(selection_mode="single", use_checkbox=False)
-                    grid_options = gb.build()
-                    row_height = 40
-                    n_rows = len(display_df)
-                    grid_height = min(2000, 60 + n_rows * row_height)
+                    def highlight_hot(val):
+                        return 'background-color: rgba(255, 165, 0, 0.3)' if isinstance(val, str) and '🔥' in val else ''
                     
-                    seasons_str = "_".join(selected_seasons) if selected_seasons else "all"
-                    grid_key = f"grid_stat_{title.replace(' ', '_')}_{'_'.join(str(v) for v in stat_inputs.values())}_{seasons_str}"
-                    
-                    grid_response = AgGrid(
-                        display_df,
-                        gridOptions=grid_options,
-                        enable_enterprise_modules=False,
-                        theme='streamlit',
-                        allow_unsafe_jscode=True,
-                        update_on=['selectionChanged'],
-                        height=grid_height,
-                        # Append the stat filters to the key so the component entirely regenerates when filters change,
-                        # successfully clearing any lingering selected_rows state and preventing ghost popups.
-                        key=grid_key
+                    try:
+                        styled_df = display_df.style.map(highlight_hot, subset=['Player'])
+                    except AttributeError:
+                        styled_df = display_df.style.applymap(highlight_hot, subset=['Player'])
+                        
+                    event = st.dataframe(
+                        styled_df,
+                        use_container_width=True,
+                        hide_index=True,
+                        on_select="rerun",
+                        selection_mode="single-row"
                     )
                     
-                    if grid_response['selected_rows'] is not None and len(grid_response['selected_rows']) > 0:
-                        import json
-                        # selected_rows might be a dataframe in newer st_aggrid, but usually a list of dicts.
-                        rows = grid_response['selected_rows']
-                        selected_row = rows.iloc[0] if isinstance(rows, pd.DataFrame) else rows[0]
-                        p_name = selected_row.get('Player', '') if isinstance(selected_row, dict) else selected_row['Player']
-                        clean_name = p_name.replace('🔥 ', '').strip()
+                    if event and hasattr(event, 'selection') and hasattr(event.selection, 'rows') and len(event.selection.rows) > 0:
+                        row_idx = event.selection.rows[0]
+                        clean_name = display_df.iloc[row_idx]['Player'].replace('🔥 ', '').strip()
                         
                         player_details = temp[temp['Player'] == clean_name].copy()
                         player_details['Date'] = pd.to_datetime(player_details['Date'], errors='coerce')
