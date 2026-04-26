@@ -330,14 +330,18 @@ try:
                 st.write(f"### {title}")
                 # compute percent hits
                 percents = compute_percent_hits(display_df_local)
-                percent_cols = st.columns(len(stat_fields))
-                for i, stat in enumerate(stat_fields):
-                    if percents[stat] is not None:
-                        percent_str = f"{percents[stat]:.1f}%"
-                    else:
-                        percent_str = "-"
-                    # Display simplified label: 'STAT: X%'
-                    percent_cols[i].markdown(f"**{stat}:** {percent_str}")
+                
+                active_stats = [stat for stat in stat_fields if stat_inputs.get(stat, 0) > 0]
+                if active_stats:
+                    percent_cols = st.columns(len(active_stats))
+                    for i, stat in enumerate(active_stats):
+                        percent_str = f"{percents[stat]:.1f}%" if percents[stat] is not None else "-"
+                        percent_cols[i].markdown(f"**{stat}:** {percent_str}")
+                        
+                    # Filter table columns to only base info + active stats
+                    base_cols = ['Date', 'Opponent', 'WL', 'Status', 'Pos', 'MIN']
+                    cols_to_keep = [c for c in base_cols + active_stats if c in display_df_local.columns]
+                    display_df_local = display_df_local[cols_to_keep]
 
                 # Use native Streamlit styled dataframe to prevent AgGrid header scrolling separation bugs
                 try:
