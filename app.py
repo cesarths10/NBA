@@ -270,7 +270,8 @@ try:
                 for stat in stat_fields:
                     st.session_state[f'stat_{stat}'] = None
 
-            cols = st.columns(len(stat_fields))
+            # Create a spacer column to prevent inputs from spanning the full width
+            cols = st.columns([1] * len(stat_fields) + [len(stat_fields)])
             for i, stat in enumerate(stat_fields):
                 # Omit 'value' explicitly to let Streamlit's 'key' attribute manage the state fully without looping
                 val = cols[i].number_input(f"{stat}", min_value=0, step=1, key=f'stat_{stat}', placeholder="0")
@@ -366,9 +367,9 @@ try:
                         return pd.DataFrame([highlight]*len(s.columns)).T
                     
                     styled = display_df_local.style.set_properties(**{'text-align': 'left'}).set_table_styles([dict(selector='th', props=[('text-align', 'left')])]).apply(lambda _: highlight_rows(display_df_local), axis=None)
-                    st.dataframe(styled, use_container_width=True, hide_index=True)
+                    st.dataframe(styled, use_container_width=False, hide_index=True)
                 except Exception:
-                    st.dataframe(display_df_local, use_container_width=True, hide_index=True)
+                    st.dataframe(display_df_local, use_container_width=False, hide_index=True)
 
             # Render logic for 'Select Stat'
             def render_stat_summary(df_all, players_base_df, n_games, title):
@@ -478,7 +479,7 @@ try:
                         
                     event = st.dataframe(
                         styled_df,
-                        use_container_width=True,
+                        use_container_width=False,
                         hide_index=True,
                         on_select="rerun",
                         selection_mode="single-row"
@@ -494,8 +495,8 @@ try:
                         show_player_logs_dialog(clean_name, player_details, title)
 
                 except Exception as e:
-                    # Fallback to standard dataframe if AgGrid fails
-                    st.dataframe(display_df, width='stretch')
+                    # Fallback to standard dataframe if styling fails
+                    st.dataframe(display_df, use_container_width=False, hide_index=True)
 
             # Render each summary table depending on view_mode
             if view_mode == 'Select Player':
