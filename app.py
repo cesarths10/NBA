@@ -487,6 +487,10 @@ try:
                     row_height = 40
                     n_rows = len(display_df)
                     grid_height = min(2000, 60 + n_rows * row_height)
+                    
+                    seasons_str = "_".join(selected_seasons) if selected_seasons else "all"
+                    grid_key = f"grid_stat_{title.replace(' ', '_')}_{'_'.join(str(v) for v in stat_inputs.values())}_{seasons_str}"
+                    
                     grid_response = AgGrid(
                         display_df,
                         gridOptions=grid_options,
@@ -497,8 +501,7 @@ try:
                         height=grid_height,
                         # Append the stat filters to the key so the component entirely regenerates when filters change,
                         # successfully clearing any lingering selected_rows state and preventing ghost popups.
-                        seasons_str = "_".join(selected_seasons) if selected_seasons else "all"
-                        key=f"grid_stat_{title.replace(' ', '_')}_{'_'.join(str(v) for v in stat_inputs.values())}_{seasons_str}"
+                        key=grid_key
                     )
                     
                     if grid_response['selected_rows'] is not None and len(grid_response['selected_rows']) > 0:
