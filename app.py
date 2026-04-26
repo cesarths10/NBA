@@ -394,23 +394,23 @@ try:
 
                 # Keep only fields we are filtering on to save memory
                 cols_to_keep = ['Player', 'Date'] + [col for col in stat_fields if stat_inputs[col] > 0]
-                temp = temp[[c for c in cols_to_keep if c in temp.columns]]
+                temp_filtered = temp[[c for c in cols_to_keep if c in temp.columns]].copy()
                 
                 # Filter down to top n_games per player
-                temp['Date'] = pd.to_datetime(temp['Date'], errors='coerce')
-                temp = temp.sort_values(['Player', 'Date'], ascending=[True, False])
-                temp = temp.groupby('Player').head(n_games)
+                temp_filtered['Date'] = pd.to_datetime(temp_filtered['Date'], errors='coerce')
+                temp_filtered = temp_filtered.sort_values(['Player', 'Date'], ascending=[True, False])
+                temp_filtered = temp_filtered.groupby('Player').head(n_games)
                 
                 # Count hits
                 # A row is a hit if for ALL active stat inputs, the row matches or exceeds the value.
                 # Actually, requirement: "hit the stat lines selected or greater".
                 # It means ALL selected criteria must be met in that single game.
-                hit_mask = pd.Series([True] * len(temp), index=temp.index)
+                hit_mask = pd.Series([True] * len(temp_filtered), index=temp_filtered.index)
                 for stat in stat_fields:
-                    if stat_inputs[stat] > 0 and stat in temp.columns:
-                        hit_mask = hit_mask & (temp[stat].astype(float) >= stat_inputs[stat])
+                    if stat_inputs[stat] > 0 and stat in temp_filtered.columns:
+                        hit_mask = hit_mask & (temp_filtered[stat].astype(float) >= stat_inputs[stat])
                 
-                temp['Hit'] = hit_mask.astype(int)
+                temp_filtered['Hit'] = hit_mask.astype(int)
                 
                 # Aggregate
                 def calc_active_streak(series):
@@ -422,7 +422,7 @@ try:
                             break
                     return streak
 
-                agg_df = temp.groupby('Player').agg(
+                agg_df = temp_filtered.groupby('Player').agg(
                     Hits=('Hit', 'sum'),
                     GamesPlayed=('Hit', 'count'),
                     ActiveStreak=('Hit', calc_active_streak)
@@ -497,7 +497,8 @@ try:
                         height=grid_height,
                         # Append the stat filters to the key so the component entirely regenerates when filters change,
                         # successfully clearing any lingering selected_rows state and preventing ghost popups.
-                        key=f"grid_stat_{title.replace(' ', '_')}_{'_'.join(str(v) for v in stat_inputs.values())}"
+                        seasons_str = "_".join(selected_seasons) if selected_seasons else "all"
+                        key=f"grid_stat_{title.replace(' ', '_')}_{'_'.join(str(v) for v in stat_inputs.values())}_{seasons_str}"
                     )
                     
                     if grid_response['selected_rows'] is not None and len(grid_response['selected_rows']) > 0:
@@ -508,7 +509,9 @@ try:
                         p_name = selected_row.get('Player', '') if isinstance(selected_row, dict) else selected_row['Player']
                         clean_name = p_name.replace('🔥 ', '').strip()
                         
-                        player_details = temp[temp['Player'] == clean_name]
+                        player_details = temp[temp['Player'] == clean_name].copy()
+                        player_details['Date'] = pd.to_datetime(player_details['Date'], errors='coerce')
+                        player_details = player_details.sort_values('Date', ascending=False).head(n_games)
                         show_player_logs_dialog(clean_name, player_details, title)
 
                 except Exception as e:
