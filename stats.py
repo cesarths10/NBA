@@ -72,7 +72,7 @@ def fetch_html(url: str, headers=None, timeout=15) -> str:
         time.sleep(1)
     return ''
 
-def fetch_html_selenium(url: str, timeout: int = 30) -> str:
+def fetch_htmls_selenium(urls: list[str], timeout: int = 30) -> list[str]:
     chrome_options = Options()
     chrome_options.add_argument("--incognito")
     chrome_options.add_argument("--no-sandbox")
@@ -83,27 +83,33 @@ def fetch_html_selenium(url: str, timeout: int = 30) -> str:
     )
 
     driver = None
+    results = []
     try:
         driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
         driver.set_page_load_timeout(timeout)
-        driver.implicitly_wait(5)
-        driver.get(url)
+        driver.implicitly_wait(2)
 
-        try:
-            wait = WebDriverWait(driver, 15)
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table tbody tr")))
-        except TimeoutException:
-            pass
-
-        return driver.page_source
+        for url in urls:
+            try:
+                driver.get(url)
+                try:
+                    wait = WebDriverWait(driver, 5)
+                    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table tbody tr")))
+                except TimeoutException:
+                    pass
+                results.append(driver.page_source)
+            except Exception:
+                results.append('')
+            time.sleep(0.5)
     except WebDriverException:
-        return ''
+        results = [''] * len(urls)
     finally:
         try:
             if driver:
                 driver.quit()
         except Exception:
             pass
+    return results
 
 def parse_gamelogs_table(html: str) -> pd.DataFrame:
     soup = BeautifulSoup(html, 'lxml')
@@ -166,32 +172,27 @@ def process_player(player_name: str, summary_href: str, out_dir: str) -> pd.Data
     if not gamelogs_url:
         return pd.DataFrame()
     
-    # Use Selenium to bypass 403/Cloudflare
-    html = fetch_html_selenium(gamelogs_url)
-    if not html:
+    suffixes = ['Reg', 'Playoffs', 'Play-In', 'Preseason']
+    game_types = ['Regular Season', 'Playoffs', 'Play-In', 'Preseason']
+    urls = [f"{gamelogs_url}/{s}" for s in suffixes]
+    
+    htmls = fetch_htmls_selenium(urls)
+    
+    dfs = []
+    for gt, html in zip(game_types, htmls):
+        if not html:
+            continue
+        df_parsed = parse_gamelogs_table(html)
+        if df_parsed.empty:
+            continue
+        df_parsed['GameType'] = gt
+        dfs.append(df_parsed)
+        
+    if not dfs:
         return pd.DataFrame()
-
-    df = parse_gamelogs_table(html)
-    if df.empty:
-        return pd.DataFrame()
-
-    season_starts = {
-        2015: datetime(2015, 10, 27),
-        2016: datetime(2016, 10, 25),
-        2017: datetime(2017, 10, 17),
-        2018: datetime(2018, 10, 16),
-        2019: datetime(2019, 10, 22),
-        2020: datetime(2020, 12, 22),
-        2021: datetime(2021, 10, 19),
-        2022: datetime(2022, 10, 18),
-        2023: datetime(2023, 10, 24),
-        2024: datetime(2024, 10, 22),
-        2025: datetime(2025, 10, 21),
-    }
-
-    start_list = sorted(season_starts.values())
-    first_start = start_list[0]
-
+        
+    df = pd.concat(dfs, ignore_index=True)
+    
     date_col = None
     for c in df.columns:
         if str(c).strip().lower() == 'date':
@@ -201,22 +202,21 @@ def process_player(player_name: str, summary_href: str, out_dir: str) -> pd.Data
         date_col = df.columns[0]
 
     parsed_dates = pd.to_datetime(df[date_col], errors='coerce', format='%m/%d/%Y')
-
-    keep_mask = []
-    for d in parsed_dates:
+    df['Date_Parsed'] = parsed_dates
+    
+    # Keep only dates after the 2015-16 season starts (2015-10-27)
+    df = df[df['Date_Parsed'] >= datetime(2015, 10, 27)].copy()
+    if df.empty:
+        return pd.DataFrame()
+        
+    def calc_season(d):
         if pd.isna(d):
-            keep_mask.append(False)
-            continue
-        if d < first_start:
-            keep_mask.append(False)
-            continue
-        idx = bisect_right(start_list, d) - 1
-        if idx >= 0:
-            keep_mask.append(True)
-        else:
-            keep_mask.append(False)
-
-    df = df[pd.Series(keep_mask).values]
+            return None
+        season_end = d.year + 1 if d.month >= 8 else d.year
+        return f"{season_end-1}-{str(season_end)[-2:]}"
+        
+    df['Season'] = df['Date_Parsed'].apply(calc_season)
+    df.drop(columns=['Date_Parsed'], inplace=True, errors='ignore')
 
     df.insert(0, 'Player', player_name)
     m = re.search(r"/Summary/(\d+)", summary_href)
@@ -234,13 +234,21 @@ def process_player(player_name: str, summary_href: str, out_dir: str) -> pd.Data
         '3PA': 'TPA',
         '3P%': 'TPPercent',
         'FT%': 'FTPercent',
+        'Min': 'MIN',
+        'MIN': 'MIN',
         'GameLogsUrl': 'GameLogsURL',
     }
     df = df.rename(columns=rename_map)
 
-    for c in ['PTS', 'TPM', 'REB', 'AST', 'STL', 'BLK', 'TOV']:
+    int_cols = ['PTS', 'FGM', 'FGA', 'TPM', 'TPA', 'FTM', 'FTA', 'ORB', 'DRB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF']
+    for c in int_cols:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0).astype(int)
+            
+    float_cols = ['FGPercent', 'TPPercent', 'FTPercent', 'FIC']
+    for c in float_cols:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0).astype(float)
 
     return df
 
@@ -349,46 +357,75 @@ def main(players_excel: str = None):
             conn = sqlite3.connect(db_path)
             cur = conn.cursor()
 
-            cur.execute('DROP TABLE IF EXISTS gamelogs')
+            # Schema migration check: drop old table if GameType doesn't exist
+            table_exists = cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gamelogs'").fetchone()
+            if table_exists:
+                columns = [r[1] for r in cur.execute("PRAGMA table_info(gamelogs)").fetchall()]
+                if 'GameType' not in columns:
+                    print("Outdated database schema detected. Recreating table...")
+                    cur.execute("DROP TABLE gamelogs")
+
             cur.execute('''
-            CREATE TABLE gamelogs (
+            CREATE TABLE IF NOT EXISTS gamelogs (
                 Player TEXT,
                 PlayerID INTEGER,
                 SummaryHref TEXT,
                 GameLogsURL TEXT,
+                GameType TEXT,
+                Season TEXT,
                 Date TEXT,
+                Team TEXT,
                 Opponent TEXT,
                 WL TEXT,
                 Status TEXT,
                 Pos TEXT,
                 MIN TEXT,
                 PTS INTEGER,
+                FGM INTEGER,
+                FGA INTEGER,
+                FGPercent REAL,
                 TPM INTEGER,
+                TPA INTEGER,
+                TPPercent REAL,
+                FTM INTEGER,
+                FTA INTEGER,
+                FTPercent REAL,
+                ORB INTEGER,
+                DRB INTEGER,
                 REB INTEGER,
                 AST INTEGER,
                 STL INTEGER,
                 BLK INTEGER,
-                TOV INTEGER
+                TOV INTEGER,
+                PF INTEGER,
+                FIC REAL,
+                PRIMARY KEY (PlayerID, Date, Opponent, GameType)
             )
             ''')
 
-            rename_map_db = {
-                'W/L': 'WL',
-                'GameLogsUrl': 'GameLogsURL',
-                '3PM': 'TPM',
-                '3PA': 'TPA',
-            }
-            to_write = merged.rename(columns=rename_map_db)
-
-            keep_cols = ['Player', 'PlayerID', 'SummaryHref', 'GameLogsURL', 'Date', 'Opponent', 'WL', 'Status', 'Pos', 'MIN', 'PTS', 'TPM', 'REB', 'AST', 'STL', 'BLK', 'TOV']
-            cols_present = [c for c in keep_cols if c in to_write.columns]
-            to_write = to_write[cols_present]
-
-            to_write.to_sql('gamelogs', conn, if_exists='append', index=False)
+            db_cols = [
+                'Player', 'PlayerID', 'SummaryHref', 'GameLogsURL', 'GameType', 'Season',
+                'Date', 'Team', 'Opponent', 'WL', 'Status', 'Pos', 'MIN', 'PTS',
+                'FGM', 'FGA', 'FGPercent', 'TPM', 'TPA', 'TPPercent', 'FTM', 'FTA',
+                'FTPercent', 'ORB', 'DRB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF', 'FIC'
+            ]
+            
+            for col in db_cols:
+                if col not in merged.columns:
+                    merged[col] = None
+                    
+            to_write = merged[db_cols]
+            records = to_write.to_numpy().tolist()
+            
+            placeholders = ', '.join(['?'] * len(db_cols))
+            query = f"INSERT OR REPLACE INTO gamelogs ({', '.join(db_cols)}) VALUES ({placeholders})"
+            
+            cur.executemany(query, records)
             conn.commit()
             conn.close()
-        except Exception:
-            pass
+            print(f"Successfully upserted {len(records)} game logs into database.")
+        except Exception as e:
+            print(f"Error writing to database: {e}")
 
 
 if __name__ == '__main__':
