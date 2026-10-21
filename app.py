@@ -1013,16 +1013,16 @@ try:
                                 trend = '<span style="color: #64748b;">-</span>'
 
                             stat_name = primary_labels.get(stat) or secondary_labels.get(stat) or dict(combo_stats).get(stat) or stat
-                            dashboard_rows.append(f"""
-                            <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.07);">
-                                <td style="padding: 12px 14px; font-weight: 600; color: #f8fafc;">{stat_name} <span style="color: #38bdf8; font-weight: 700; margin-left: 4px;">({t_val}+)</span></td>
-                                <td style="padding: 12px 14px; text-align: center;">{b5}</td>
-                                <td style="padding: 12px 14px; text-align: center;">{b10}</td>
-                                <td style="padding: 12px 14px; text-align: center;">{b20}</td>
-                                <td style="padding: 12px 14px; text-align: center;">{bs}</td>
-                                <td style="padding: 12px 14px; text-align: center;">{trend}</td>
-                            </tr>
-                            """)
+                            dashboard_rows.append(
+                                f'<tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.07);">'
+                                f'<td style="padding: 12px 14px; font-weight: 600; color: #f8fafc;">{stat_name} <span style="color: #38bdf8; font-weight: 700; margin-left: 4px;">({t_val}+)</span></td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{b5}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{b10}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{b20}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{bs}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{trend}</td>'
+                                f'</tr>'
+                            )
 
                         # Combo / Parlay row if multiple target stats active
                         if len(active_stats) >= 2:
@@ -1048,37 +1048,39 @@ try:
                             cb20 = format_kpi_badge(cp20, ch20, ctot20)
                             cbs = format_kpi_badge(cps, chs, ctots)
 
-                            dashboard_rows.append(f"""
-                            <tr style="background: rgba(99, 102, 241, 0.16); font-weight: 700; border-top: 1px solid rgba(99, 102, 241, 0.4);">
-                                <td style="padding: 12px 14px; color: #a5b4fc; font-weight: 800; letter-spacing: 0.02em;">🎯 ALL TARGETS (PARLAY HIT)</td>
-                                <td style="padding: 12px 14px; text-align: center;">{cb5}</td>
-                                <td style="padding: 12px 14px; text-align: center;">{cb10}</td>
-                                <td style="padding: 12px 14px; text-align: center;">{cb20}</td>
-                                <td style="padding: 12px 14px; text-align: center;">{cbs}</td>
-                                <td style="padding: 12px 14px; text-align: center;">-</td>
-                            </tr>
-                            """)
+                            dashboard_rows.append(
+                                f'<tr style="background: rgba(99, 102, 241, 0.16); font-weight: 700; border-top: 1px solid rgba(99, 102, 241, 0.4);">'
+                                f'<td style="padding: 12px 14px; color: #a5b4fc; font-weight: 800; letter-spacing: 0.02em;">🎯 ALL TARGETS (PARLAY HIT)</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{cb5}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{cb10}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{cb20}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">{cbs}</td>'
+                                f'<td style="padding: 12px 14px; text-align: center;">-</td>'
+                                f'</tr>'
+                            )
 
-                        dashboard_table = f"""
-                        <div style="overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(11, 15, 25, 0.5);">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                                <thead>
-                                    <tr style="background: rgba(15, 23, 42, 0.85); border-bottom: 2px solid rgba(255, 255, 255, 0.1); text-align: left; color: #94a3b8;">
-                                        <th style="padding: 10px 14px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Target Stat Line</th>
-                                        <th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Last 5 Games</th>
-                                        <th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Last 10 Games</th>
-                                        <th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Last 20 Games</th>
-                                        <th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Full Season</th>
-                                        <th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">L5 vs. Season Trend</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {''.join(dashboard_rows)}
-                                </tbody>
-                            </table>
-                        </div>
-                        """
-                        st.markdown(dashboard_table, unsafe_allow_html=True)
+                        rows_html = "".join(dashboard_rows)
+                        dashboard_table = (
+                            f'<div style="overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(11, 15, 25, 0.5);">'
+                            f'<table style="width: 100%; border-collapse: collapse; font-size: 14px;">'
+                            f'<thead>'
+                            f'<tr style="background: rgba(15, 23, 42, 0.85); border-bottom: 2px solid rgba(255, 255, 255, 0.1); text-align: left; color: #94a3b8;">'
+                            f'<th style="padding: 10px 14px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Target Stat Line</th>'
+                            f'<th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Last 5 Games</th>'
+                            f'<th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Last 10 Games</th>'
+                            f'<th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Last 20 Games</th>'
+                            f'<th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Full Season</th>'
+                            f'<th style="padding: 10px 14px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">L5 vs. Season Trend</th>'
+                            f'</tr>'
+                            f'</thead>'
+                            f'<tbody>{rows_html}</tbody>'
+                            f'</table>'
+                            f'</div>'
+                        )
+                        if hasattr(st, "html"):
+                            st.html(dashboard_table)
+                        else:
+                            st.markdown(dashboard_table, unsafe_allow_html=True)
             elif view_mode == 'Select Stat' and active_stats:
                 with st.container(border=True):
                     st.markdown("### 🏆 Leaderboard Target Criteria")
