@@ -1,6 +1,5 @@
 # Streamlit secrets
-.streamlit/
-
+.streamlit/secrets.toml
 # Python virtual environment
 venv/
 env/
