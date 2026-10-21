@@ -550,39 +550,33 @@ try:
                     'P|R': [20, 25]
                 }
 
+                # Callback handlers for preset and ladder buttons (runs BEFORE widgets instantiate)
+                def set_stat_target(stat_name, target_value):
+                    st.session_state[f'stat_{stat_name}'] = target_value
+
+                def set_multi_targets(**targets):
+                    for stat_name, target_value in targets.items():
+                        st.session_state[f'stat_{stat_name}'] = target_value
+
+                def clear_all_targets():
+                    for s in stat_fields:
+                        st.session_state[f'stat_{s}'] = 0
+
                 # Quick Prop Presets Row
                 preset_bar, clear_bar = st.columns([6, 1])
                 with preset_bar:
                     st.markdown("<span style='font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;'>⚡ Popular Betting Presets:</span>", unsafe_allow_html=True)
                     p_cols = st.columns(7)
-                    if p_cols[0].button("🏀 20+ PTS", use_container_width=True, help="Set Points to 20+"):
-                        st.session_state['stat_PTS'] = 20
-                        st.rerun()
-                    if p_cols[1].button("🏀 25+ PTS", use_container_width=True, help="Set Points to 25+"):
-                        st.session_state['stat_PTS'] = 25
-                        st.rerun()
-                    if p_cols[2].button("🎯 3+ 3PM", use_container_width=True, help="Set 3-Pointers to 3+"):
-                        st.session_state['stat_TPM'] = 3
-                        st.rerun()
-                    if p_cols[3].button("💪 8+ REB", use_container_width=True, help="Set Rebounds to 8+"):
-                        st.session_state['stat_REB'] = 8
-                        st.rerun()
-                    if p_cols[4].button("🤝 6+ AST", use_container_width=True, help="Set Assists to 6+"):
-                        st.session_state['stat_AST'] = 6
-                        st.rerun()
-                    if p_cols[5].button("🔥 30+ PRA", use_container_width=True, help="Set PTS + REB + AST to 30+"):
-                        st.session_state['stat_P|R|A'] = 30
-                        st.rerun()
-                    if p_cols[6].button("⭐ 10P/10R DD", use_container_width=True, help="Double-Double line: 10+ PTS & 10+ REB"):
-                        st.session_state['stat_PTS'] = 10
-                        st.session_state['stat_REB'] = 10
-                        st.rerun()
+                    p_cols[0].button("🏀 20+ PTS", use_container_width=True, help="Set Points to 20+", on_click=set_stat_target, args=('PTS', 20))
+                    p_cols[1].button("🏀 25+ PTS", use_container_width=True, help="Set Points to 25+", on_click=set_stat_target, args=('PTS', 25))
+                    p_cols[2].button("🎯 3+ 3PM", use_container_width=True, help="Set 3-Pointers to 3+", on_click=set_stat_target, args=('TPM', 3))
+                    p_cols[3].button("💪 8+ REB", use_container_width=True, help="Set Rebounds to 8+", on_click=set_stat_target, args=('REB', 8))
+                    p_cols[4].button("🤝 6+ AST", use_container_width=True, help="Set Assists to 6+", on_click=set_stat_target, args=('AST', 6))
+                    p_cols[5].button("🔥 30+ PRA", use_container_width=True, help="Set PTS + REB + AST to 30+", on_click=set_stat_target, args=('P|R|A', 30))
+                    p_cols[6].button("⭐ 10P/10R DD", use_container_width=True, help="Double-Double line: 10+ PTS & 10+ REB", on_click=set_multi_targets, kwargs={'PTS': 10, 'REB': 10})
                 with clear_bar:
                     st.markdown("<span style='font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;'>Reset:</span>", unsafe_allow_html=True)
-                    if st.button('🧹 Clear All', use_container_width=True, help="Reset all stat lines"):
-                        for stat in stat_fields:
-                            st.session_state[f'stat_{stat}'] = None
-                        st.rerun()
+                    st.button('🧹 Clear All', use_container_width=True, help="Reset all stat lines", on_click=clear_all_targets)
 
                 st.write("")
 
@@ -603,9 +597,13 @@ try:
                         if stat in stat_ladders:
                             l_cols = st.columns(len(stat_ladders[stat]))
                             for idx, l_val in enumerate(stat_ladders[stat]):
-                                if l_cols[idx].button(f"{l_val}+", key=f"ladder_{stat}_{l_val}", use_container_width=True):
-                                    st.session_state[f'stat_{stat}'] = l_val
-                                    st.rerun()
+                                l_cols[idx].button(
+                                    f"{l_val}+",
+                                    key=f"ladder_{stat}_{l_val}",
+                                    use_container_width=True,
+                                    on_click=set_stat_target,
+                                    args=(stat, l_val)
+                                )
 
                 st.write("")
 
@@ -623,9 +621,13 @@ try:
                         if stat in stat_ladders:
                             l_cols = st.columns(len(stat_ladders[stat]))
                             for idx, l_val in enumerate(stat_ladders[stat]):
-                                if l_cols[idx].button(f"{l_val}+", key=f"ladder_{stat}_{l_val}", use_container_width=True):
-                                    st.session_state[f'stat_{stat}'] = l_val
-                                    st.rerun()
+                                l_cols[idx].button(
+                                    f"{l_val}+",
+                                    key=f"ladder_{stat}_{l_val}",
+                                    use_container_width=True,
+                                    on_click=set_stat_target,
+                                    args=(stat, l_val)
+                                )
 
                 combo_stats = [
                     ('P|R|A', '🔥 PTS + REB + AST'),
@@ -639,9 +641,13 @@ try:
                         if stat in stat_ladders:
                             l_cols = st.columns(len(stat_ladders[stat]))
                             for idx, l_val in enumerate(stat_ladders[stat]):
-                                if l_cols[idx].button(f"{l_val}+", key=f"ladder_{stat}_{l_val}", use_container_width=True):
-                                    st.session_state[f'stat_{stat}'] = l_val
-                                    st.rerun()
+                                l_cols[idx].button(
+                                    f"{l_val}+",
+                                    key=f"ladder_{stat}_{l_val}",
+                                    use_container_width=True,
+                                    on_click=set_stat_target,
+                                    args=(stat, l_val)
+                                )
 
             def get_gamelog_column_config():
                 cfg = {
@@ -737,7 +743,7 @@ try:
                     return results
                 for stat in stat_fields:
                     if stat in display_df_local.columns and stat_inputs[stat] > 0:
-                        mask = display_df_local[stat].astype(float) >= stat_inputs[stat]
+                        mask = pd.to_numeric(display_df_local[stat], errors='coerce') >= stat_inputs[stat]
                         percent = mask.sum() / n * 100
                         results[stat] = percent
                     else:
@@ -776,30 +782,17 @@ try:
 
                 try:
                     def highlight_rows(s):
-                        highlight = []
-                        for idx, row in s.iterrows():
-                            row_highlight = True
-                            has_filter = False
-                            for stat in stat_fields:
-                                if stat_inputs[stat] > 0:
-                                    has_filter = True
-                                    if stat not in row or pd.isnull(row[stat]):
-                                        row_highlight = False
-                                        break
-                                    try:
-                                        if float(row[stat]) < stat_inputs[stat]:
-                                            row_highlight = False
-                                            break
-                                    except Exception:
-                                        row_highlight = False
-                                        break
-                            
-                            if not has_filter:
-                                row_highlight = False
-                            
-                            # Soft neon green highlight for dark theme
-                            highlight.append('background-color: rgba(16, 185, 129, 0.22)' if row_highlight else '')
-                        return pd.DataFrame([highlight]*len(s.columns)).T
+                        mask = pd.Series([True] * len(s), index=s.index)
+                        has_filter = False
+                        for stat in stat_fields:
+                            if stat_inputs.get(stat, 0) > 0 and stat in s.columns:
+                                has_filter = True
+                                mask = mask & (pd.to_numeric(s[stat], errors='coerce') >= stat_inputs[stat])
+                        
+                        css_df = pd.DataFrame('', index=s.index, columns=s.columns)
+                        if has_filter:
+                            css_df.loc[mask, :] = 'background-color: rgba(16, 185, 129, 0.22)'
+                        return css_df
                     
                     styled = display_df_local.style.set_properties(**{'text-align': 'right'}).set_table_styles([
                         dict(selector='th', props=[('text-align', 'right')]),
@@ -823,7 +816,7 @@ try:
                 temp = df_all.copy()
                 for combo, parts in [('P|R|A', ['PTS', 'REB', 'AST']), ('P|A', ['PTS', 'AST']), ('P|R', ['PTS', 'REB'])]:
                     if all(p in temp.columns for p in parts):
-                        temp[combo] = temp[parts].astype(float).sum(axis=1)
+                        temp[combo] = temp[parts].apply(pd.to_numeric, errors='coerce').sum(axis=1)
 
                 cols_to_keep = ['Player', 'Date'] + [col for col in stat_fields if stat_inputs[col] > 0]
                 temp_filtered = temp[[c for c in cols_to_keep if c in temp.columns]].copy()
@@ -836,7 +829,7 @@ try:
                 hit_mask = pd.Series([True] * len(temp_filtered), index=temp_filtered.index)
                 for stat in stat_fields:
                     if stat_inputs[stat] > 0 and stat in temp_filtered.columns:
-                        hit_mask = hit_mask & (temp_filtered[stat].astype(float) >= stat_inputs[stat])
+                        hit_mask = hit_mask & (pd.to_numeric(temp_filtered[stat], errors='coerce') >= stat_inputs[stat])
                 
                 temp_filtered['Hit'] = hit_mask.astype(int)
                 
