@@ -72,14 +72,33 @@ def fetch_html(url: str, headers=None, timeout=15) -> str:
         time.sleep(1)
     return ''
 
+def fetch_htmls_curl_cffi(urls: list[str], timeout: int = 20) -> list[str]:
+    try:
+        from curl_cffi import requests
+        session = requests.Session(impersonate="chrome120")
+        results = []
+        for url in urls:
+            try:
+                resp = session.get(url, timeout=timeout)
+                if resp.status_code == 200:
+                    results.append(resp.text)
+                else:
+                    results.append('')
+            except Exception:
+                results.append('')
+        return results
+    except Exception:
+        return []
+
 def fetch_htmls_selenium(urls: list[str], timeout: int = 30) -> list[str]:
     chrome_options = Options()
     chrome_options.add_argument("--incognito")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     )
 
     driver = None
@@ -176,7 +195,9 @@ def process_player(player_name: str, summary_href: str, out_dir: str) -> pd.Data
     game_types = ['Regular Season', 'Playoffs', 'Play-In', 'Preseason']
     urls = [f"{gamelogs_url}/{s}" for s in suffixes]
     
-    htmls = fetch_htmls_selenium(urls)
+    htmls = fetch_htmls_curl_cffi(urls)
+    if not any(htmls):
+        htmls = fetch_htmls_selenium(urls)
     
     dfs = []
     for gt, html in zip(game_types, htmls):
@@ -252,15 +273,28 @@ def process_player(player_name: str, summary_href: str, out_dir: str) -> pd.Data
 
     return df
 
-def main(players_excel: str = None):
-    players_excel = players_excel or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'players.xlsx')
-    if not os.path.exists(players_excel):
+def main(players_file: str = None, workers: int = 6, limit: int = None, season_filter: str = None):
+    out_dir = os.path.dirname(os.path.abspath(__file__))
+    if not players_file:
+        default_csv = os.path.join(out_dir, 'players.csv')
+        default_xlsx = os.path.join(out_dir, 'players.xlsx')
+        players_file = default_csv if os.path.exists(default_csv) else default_xlsx
+
+    if not os.path.exists(players_file):
+        print(f"File not found: {players_file}")
         return
 
-    out_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        if players_file.endswith('.csv'):
+            players_df = pd.read_csv(players_file)
+        else:
+            players_df = pd.read_excel(players_file)
+    except Exception as e:
+        print(f"Error reading {players_file}: {e}")
+        return
 
-    players_df = pd.read_excel(players_excel)
     if 'PlayerHref' not in players_df.columns and 'Player' not in players_df.columns:
+        print("Required columns missing from players file.")
         return
 
     def player_row_to_args(row, idx):
@@ -276,21 +310,39 @@ def main(players_excel: str = None):
     player_args = [player_row_to_args(row, idx) for idx, row in players_df.iterrows()]
     player_args = [a for a in player_args if a is not None]
     
+    if limit:
+        player_args = player_args[:limit]
+        print(f"Limiting scrape to first {limit} players.")
+
     all_frames = []
-    # Reduce workers to avoid spawning too many browser instances
-    max_workers = min(2, len(player_args))
+    max_workers = min(workers, len(player_args)) if player_args else 1
+    total_players = len(player_args)
+    completed = 0
+
+    print(f"Starting stats collection for {total_players} players with {max_workers} concurrent workers...")
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(process_player, *args) for args in player_args]
+        futures = {executor.submit(process_player, *args): args[0] for args in player_args}
         for future in as_completed(futures):
+            p_name = futures[future]
+            completed += 1
             try:
                 df = future.result()
                 if not df.empty:
-                    all_frames.append(df)
-            except Exception:
-                pass
+                    if season_filter:
+                        df = df[df['Season'] == season_filter]
+                    if not df.empty:
+                        all_frames.append(df)
+                        print(f"[{completed}/{total_players}] {p_name}: {len(df)} games collected")
+                    else:
+                        print(f"[{completed}/{total_players}] {p_name}: 0 games for season {season_filter}")
+                else:
+                    print(f"[{completed}/{total_players}] {p_name}: 0 games found")
+            except Exception as e:
+                print(f"[{completed}/{total_players}] {p_name}: Error {e}")
 
     if not all_frames:
+        print("No games collected to write.")
         return
 
     combined_new = pd.concat(all_frames, ignore_index=True)
@@ -432,7 +484,10 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Scrape gamelogs from RealGM and write to gamelogs.db')
-    parser.add_argument('--players', '-p', help='Path to players.xlsx (optional)', default=None)
+    parser.add_argument('--players', '-p', help='Path to players.csv or players.xlsx (optional)', default=None)
+    parser.add_argument('--workers', '-w', type=int, default=6, help='Number of concurrent workers (default: 6)')
+    parser.add_argument('--limit', '-l', type=int, default=None, help='Limit number of players to scrape (optional)')
+    parser.add_argument('--season', '-s', type=str, default=None, help='Filter to specific season (e.g. 2025-26)')
     args = parser.parse_args()
 
-    main(args.players)
+    main(args.players, workers=args.workers, limit=args.limit, season_filter=args.season)

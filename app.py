@@ -88,7 +88,7 @@ try:
     if check_password():
         DB_PATH = "gamelogs.db"
 
-        def db_mtime(path):
+        def file_mtime(path):
             return os.path.getmtime(path) if os.path.exists(path) else 0
 
         @st.cache_data
@@ -108,18 +108,21 @@ try:
                 return pd.DataFrame()
 
         @st.cache_data
-        def load_players_data():
-            path = "players.xlsx"
+        def load_players_data(path, mtime):
             if not os.path.exists(path):
                 return pd.DataFrame()
             try:
+                if path.endswith(".csv"):
+                    return pd.read_csv(path)
                 return pd.read_excel(path)
             except Exception as e:
-                st.error(f"Error reading players.xlsx: {e}")
+                st.error(f"Error reading {path}: {e}")
                 return pd.DataFrame()
 
-        df = load_gamelogs(DB_PATH, db_mtime(DB_PATH))
-        players_df = load_players_data()
+        PLAYERS_PATH = "players.csv" if os.path.exists("players.csv") else "players.xlsx"
+
+        df = load_gamelogs(DB_PATH, file_mtime(DB_PATH))
+        players_df = load_players_data(PLAYERS_PATH, file_mtime(PLAYERS_PATH))
 
         if df.empty:
             st.warning("No data found in gamelogs.db or database file is missing.")

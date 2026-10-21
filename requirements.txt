@@ -8,3 +8,4 @@ webdriver-manager
 streamlit>=1.35.0
 streamlit-aggrid
 altair<5
+curl_cffi

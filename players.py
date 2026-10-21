@@ -11,7 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 
 URL = "https://basketball.realgm.com/nba/players"
-DEFAULT_OUTPUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "players.xlsx")
+DEFAULT_OUTPUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "players.csv")
 
 
 def _parse_table_rows_from_soup(soup: BeautifulSoup) -> list[dict]:
@@ -66,36 +66,51 @@ def _parse_table_rows_from_soup(soup: BeautifulSoup) -> list[dict]:
     print("No valid player rows found in any table")
     return []
 
-def _scrape_with_selenium(out_path: str) -> bool:
+def _fetch_html_curl_cffi(url: str) -> str:
     try:
-        print(f"Setting up Selenium...")
+        from curl_cffi import requests
+        print(f"Fetching {url} using curl_cffi (Chrome impersonation)...")
+        resp = requests.get(url, impersonate="chrome120", timeout=30)
+        if resp.status_code == 200:
+            return resp.text
+        print(f"curl_cffi returned status code: {resp.status_code}")
+    except Exception as e:
+        print(f"curl_cffi fetch failed: {e}")
+    return ""
+
+
+def _scrape_with_selenium(url: str = URL) -> str:
+    try:
+        print("Setting up Selenium as fallback...")
         options = Options()
-        options.add_argument("--headless")
+        options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
-        options.add_argument(f"user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        
-        # Bypass detection by removing 'webdriver' property
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
         try:
-            print(f"Fetching {URL}...")
-            driver.get(URL)
-            time.sleep(10) # Wait for page and cloudflare challenge if any
+            print(f"Fetching {url} with Selenium...")
+            driver.get(url)
+            time.sleep(10)
             html = driver.page_source
             print(f"Page Title: {driver.title}")
+            return html
         finally:
             driver.quit()
-        
-        print("Page retrieved")
     except Exception:
         print("Exception during Selenium scrape")
         traceback.print_exc()
-        return False
+        return ""
 
+
+def _save_players_to_csv(html: str, out_path: str) -> bool:
+    if not html:
+        return False
     soup = BeautifulSoup(html, "lxml")
     rows = _parse_table_rows_from_soup(soup)
     
@@ -112,17 +127,28 @@ def _scrape_with_selenium(out_path: str) -> bool:
             except Exception:
                 print(f"Failed to remove {out_path}")
                 traceback.print_exc()
-        df.to_excel(out_path, index=False)
-        print(f"Successfully wrote to {out_path}")
+        df.to_csv(out_path, index=False, encoding="utf-8")
+        print(f"Successfully wrote {len(df)} players to {out_path}")
         return True
     except Exception:
-        print("Exception during excel write")
+        print("Exception during csv write")
         traceback.print_exc()
         return False
 
+
 def run_players(out_path: Optional[str] = None) -> str:
     out_path = out_path or DEFAULT_OUTPUT
-    ok = _scrape_with_selenium(out_path)
+    # 1. Try curl_cffi with Chrome TLS impersonation (fast & bypasses Cloudflare)
+    html = _fetch_html_curl_cffi(URL)
+    if html and "<table" in html:
+        ok = _save_players_to_csv(html, out_path)
+        if ok:
+            return out_path
+            
+    # 2. Fallback to Selenium
+    print("Falling back to Selenium...")
+    html = _scrape_with_selenium(URL)
+    ok = _save_players_to_csv(html, out_path)
     return out_path if ok else ""
 
 

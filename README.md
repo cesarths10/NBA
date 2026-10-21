@@ -16,7 +16,7 @@ pip install -r requirements.txt
 
 **Script:** `players.py`
 
-This script scrapes the latest list of NBA players from RealGM and saves them to an Excel file. This file is required for the stats collection step.
+This script scrapes the latest list of NBA players from RealGM and saves them to a CSV file. This file is required for the stats collection step.
 
 **Command:**
 
@@ -24,7 +24,7 @@ This script scrapes the latest list of NBA players from RealGM and saves them to
 python players.py
 ```
 
-**Output:** `players.xlsx`
+**Output:** `players.csv`
 
 ---
 
@@ -32,7 +32,7 @@ python players.py
 
 **Script:** `stats.py`
 
-This script reads the `players.xlsx` file generated in the previous step, scrapes the game logs for each player, and stores the processed data into a local SQLite database.
+This script reads the `players.csv` file generated in the previous step, scrapes the game logs for each player, and stores the processed data into a local SQLite database.
 
 **Command:**
 
