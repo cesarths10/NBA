@@ -1,0 +1,6 @@
+@echo off
+cd /d "%~dp0"
+echo [1/2] Updating players list...
+python players.py
+echo [2/2] Updating stats and game logs...
+python stats.py
