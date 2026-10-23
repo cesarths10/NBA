@@ -221,6 +221,12 @@ div[data-testid="stNumberInput"] input {
     color: #f87171;
     border: 1px solid rgba(239, 68, 68, 0.4);
 }
+
+/* Wide Modal Dialog for Player Game Logs */
+div[data-testid="stDialog"] div[role="dialog"] {
+    width: 85vw !important;
+    max-width: 1250px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -483,7 +489,7 @@ try:
                 <div>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-size: 32px;">🏀</span>
-                        <span style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: -0.03em; background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">PROPPULSE NBA</span>
+                        <span style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: -0.03em; background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">PropPulse NBA</span>
                         <span style="background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #a5b4fc; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.08em;">v2.6 PRO</span>
                     </div>
                     <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 13px; font-weight: 500;">Real-time Player Prop Analytics • Hit Rate Intelligence • Multi-Horizon Form</p>
@@ -509,7 +515,7 @@ try:
             else:
                 pool_title = " (2026 Rookie Class)" if player_pool == '⭐ 2026 Rookie Class' else (" (Veterans Only)" if player_pool == 'Veterans Only' else "")
                 st.subheader(f"🏆 Prop Leaderboard{pool_title}")
-                st.caption("Top 10 players ranked by hit rate and consistency across Last 5, 10, 20, or Full Season games.")
+                st.caption("Top 25 players ranked by hit rate and consistency across Last 5, 10, 20, or Full Season games.")
 
             # Define ordered table display columns and target stat fields
             columns_to_display = [
@@ -675,10 +681,10 @@ try:
             # Dialog Logic for Popup Game Logs
             try:
                 # Modern Streamlit dialog decorator available in 1.35+
-                @st.dialog("Player Game Logs")
+                @st.dialog("Player Game Logs", width="large")
                 def show_player_logs_dialog(player_name, df_player_logs, timeframe):
                     st.write(f"Detailed **{timeframe}** logs for **{player_name}**:")
-                    dialog_cols = ['Date', 'Team', 'Opponent', 'WL', 'Status', 'Pos', 'MIN', 'PTS', 'TPM', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'P|R|A', 'P|A', 'P|R']
+                    dialog_cols = ['Date', 'Opponent', 'WL', 'MIN', 'PTS', 'TPM', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'P|R|A', 'P|A', 'P|R']
                     df_out = df_player_logs[[c for c in dialog_cols if c in df_player_logs.columns]].copy()
                     # Standardize game date string format
                     if 'Date' in df_out.columns:
@@ -696,7 +702,7 @@ try:
             except AttributeError:
                 def show_player_logs_dialog(player_name, df_player_logs, timeframe):
                     st.markdown(f"### Detailed **{timeframe}** logs for **{player_name}**:")
-                    dialog_cols = ['Date', 'Team', 'Opponent', 'WL', 'Status', 'Pos', 'MIN', 'PTS', 'TPM', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'P|R|A', 'P|A', 'P|R']
+                    dialog_cols = ['Date', 'Opponent', 'WL', 'MIN', 'PTS', 'TPM', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'P|R|A', 'P|A', 'P|R']
                     df_out = df_player_logs[[c for c in dialog_cols if c in df_player_logs.columns]].copy()
                     # Standardize game date string format
                     if 'Date' in df_out.columns:
@@ -897,18 +903,18 @@ try:
                     st.write("No players found hitting these stats in the selected timeframe.")
                     return
                 
-                # Merge player metadata (position, age, team, years of service) from roster table
+                # Merge player metadata (position, team) from roster table
                 if not players_base_df.empty:
-                    agg_df = agg_df.merge(players_base_df[['Player', 'Pos', 'Age', 'Current Team', 'YOS']], on='Player', how='left')
+                    agg_df = agg_df.merge(players_base_df[['Player', 'Pos', 'Current Team']], on='Player', how='left')
                 else:
-                    for col in ['Pos', 'Age', 'Current Team', 'YOS']:
+                    for col in ['Pos', 'Current Team']:
                         agg_df[col] = ''
                 
                 # Mark players with active streaks of 3 or more games as hot
                 agg_df['IsHotStreak'] = agg_df['ActiveStreak'] >= 3
                 agg_df['LastName'] = agg_df['Player'].apply(lambda n: n.split(' ')[-1] if isinstance(n, str) and ' ' in n else n)
                 # Sort leaderboard by hot streak, total hits, and last name
-                agg_df = agg_df.sort_values(['IsHotStreak', 'Hits', 'LastName'], ascending=[False, False, True]).head(10)
+                agg_df = agg_df.sort_values(['IsHotStreak', 'Hits', 'LastName'], ascending=[False, False, True]).head(25)
                 
                 # Format player display label with flame emoji for hot streaks and star for rookies
                 def format_lb_player(r):
@@ -926,7 +932,7 @@ try:
                     lambda s: f"🔥 {s} in a row" if s >= 3 else (f"{s} games" if s > 0 else "-")
                 )
                 
-                display_cols = ['Player', 'Pos', 'Current Team', 'Age', 'YOS', 'Record', 'Hit %', 'Streak']
+                display_cols = ['Player', 'Pos', 'Current Team', 'Record', 'Hit %', 'Streak']
                 display_df = agg_df[[c for c in display_cols if c in agg_df.columns]].copy()
                 
                 # Configure Leaderboard columns with visual progress bar for Hit Rate
@@ -938,8 +944,6 @@ try:
                     ),
                     "Pos": st.column_config.TextColumn("Pos", width="small"),
                     "Current Team": st.column_config.TextColumn("Team", width="small"),
-                    "Age": st.column_config.TextColumn("Age", width="small"),
-                    "YOS": st.column_config.TextColumn("Exp", help="Years of NBA Service (YOS)", width="small"),
                     "Record": st.column_config.TextColumn(
                         "Hits / GP",
                         help="Games Hit vs Total Games in timeframe",
@@ -974,8 +978,8 @@ try:
                         
                     styled_df = styled_df.set_properties(**{'text-align': 'right'}).set_table_styles([
                         dict(selector='th', props=[('text-align', 'right')]),
-                        dict(selector='td:nth-child(-n+4)', props=[('text-align', 'left')]), # Text cols left-aligned
-                        dict(selector='th:nth-child(-n+4)', props=[('text-align', 'left')])
+                        dict(selector='td:nth-child(-n+3)', props=[('text-align', 'left')]), # Text cols left-aligned
+                        dict(selector='th:nth-child(-n+3)', props=[('text-align', 'left')])
                     ])
                         
                     # Render interactive leaderboard table with click-to-view logs
