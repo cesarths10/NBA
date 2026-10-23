@@ -385,8 +385,9 @@ try:
                 season_display_map = {format_season_display(s): s for s in raw_seasons}
                 display_options = list(season_display_map.keys())
 
-                # Default to selecting the most recent season
-                default_display = [display_options[0]] if display_options else []
+                # Default to selecting current season only
+                current_season_opt = next((opt for opt in display_options if '(Current Season)' in opt), None)
+                default_display = [current_season_opt] if current_season_opt else ([display_options[0]] if display_options else [])
                 selected_display_seasons = st.multiselect(
                     'Select Season(s)',
                     display_options,
@@ -394,12 +395,12 @@ try:
                 )
                 selected_seasons = [season_display_map[d] for d in selected_display_seasons if d in season_display_map]
                 
-                # Multi-select filter for NBA game categories
+                # Multi-select filter for NBA game categories (defaults to Regular Season only)
                 all_game_types = ['Regular Season', 'Playoffs', 'Play-In', 'Preseason']
                 selected_game_types = st.multiselect(
                     'Select Game Type(s)',
                     all_game_types,
-                    default=['Regular Season', 'Playoffs', 'Preseason']
+                    default=['Regular Season']
                 )
 
             # Identify rookie players from roster data where Years of Service is 0 or 'R'
