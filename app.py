@@ -295,8 +295,12 @@ try:
                 conn = sqlite3.connect(db_path)
                 df = pd.read_sql_query("SELECT * FROM gamelogs", conn)
                 conn.close()
-                # Compute helper columns for season labeling and preseason categorization
+                # Compute helper columns and enforce 2026-27 regular season schedule boundaries
                 if not df.empty:
+                    # Enforce official 2026-27 schedule (October 20, 2026 to April 11, 2027)
+                    if 'Date' in df.columns and 'Season' in df.columns and 'GameType' in df.columns:
+                        mask_early_reg = (df['Season'] == '2026-27') & (df['GameType'] == 'Regular Season') & (df['Date'] < '2026-10-20')
+                        df.loc[mask_early_reg, 'GameType'] = 'Preseason'
                     df['season_label'] = df['Season']
                     df['is_preseason'] = df['GameType'] == 'Preseason'
                 return df

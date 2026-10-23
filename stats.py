@@ -317,6 +317,16 @@ def process_player(player_name: str, summary_href: str, out_dir: str) -> pd.Data
         
     # Populate the Season label column
     df['Season'] = df['Date_Parsed'].apply(calc_season)
+
+    # Enforce official 2026-27 schedule (Tuesday, October 20, 2026 to Sunday, April 11, 2027)
+    # Reclassify any 'Regular Season' games played before October 20, 2026 as 'Preseason'
+    mask_early_2026 = (df['Season'] == '2026-27') & (df['GameType'] == 'Regular Season') & (df['Date_Parsed'] < datetime(2026, 10, 20))
+    df.loc[mask_early_2026, 'GameType'] = 'Preseason'
+
+    # Reclassify any 2026-27 Regular Season games played after April 11, 2027 as 'Playoffs'
+    mask_late_2026 = (df['Season'] == '2026-27') & (df['GameType'] == 'Regular Season') & (df['Date_Parsed'] > datetime(2027, 4, 11))
+    df.loc[mask_late_2026, 'GameType'] = 'Playoffs'
+
     df.drop(columns=['Date_Parsed'], inplace=True, errors='ignore')
 
     # Insert player metadata columns at the beginning of the DataFrame
