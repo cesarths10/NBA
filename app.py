@@ -931,7 +931,7 @@ try:
 
                 # Calculate hit rate percentage and formatted record strings
                 agg_df['Player'] = agg_df.apply(format_lb_player, axis=1)
-                agg_df['Hit %'] = agg_df['Hits'] / agg_df['GamesPlayed']
+                agg_df['Hit %'] = (agg_df['Hits'] / agg_df['GamesPlayed']) * 100
                 agg_df['Record'] = agg_df.apply(lambda r: f"{r['Hits']} / {r['GamesPlayed']}", axis=1)
                 agg_df['Streak'] = agg_df['ActiveStreak'].apply(
                     lambda s: f"🔥 {s} in a row" if s >= 3 else (f"{s} games" if s > 0 else "-")
@@ -958,8 +958,8 @@ try:
                         "Hit Rate",
                         help="Visual success rate across the selected timeframe",
                         format="%.0f%%",
-                        min_value=0.0,
-                        max_value=1.0,
+                        min_value=0,
+                        max_value=100,
                         width="medium"
                     ),
                     "Streak": st.column_config.TextColumn(
