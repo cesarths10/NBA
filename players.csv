@@ -91,7 +91,7 @@ Jaylen Clark,G,25,Minnesota Timberwolves,3,/player/Jaylen-Clark/Summary/132635,1
 Jordan Clarkson,G,34,New York Knicks,12,/player/Jordan-Clarkson/Summary/22892,22892
 Nicolas Claxton,C,27,Chicago Bulls,7,/player/Nicolas-Claxton/Summary/108483,108483
 "Walter Clayton, Jr.",G,23,Dallas Mavericks,1,/player/Walter-Clayton-Jr/Summary/183386,183386
-Nique Clifford,F,24,Sacramento Kings,1,/player/Nique-Clifford/Summary/151296,151296
+Nique Clifford,F,24,Oklahoma City Thunder,1,/player/Nique-Clifford/Summary/151296,151296
 Donovan Clingan,C,22,Portland Trail Blazers,2,/player/Donovan-Clingan/Summary/176054,176054
 Noah Clowney,F,22,Brooklyn Nets,3,/player/Noah-Clowney/Summary/162215,162215
 Isaiah Collier,G,22,Utah Jazz,2,/player/Isaiah-Collier/Summary/160206,160206
@@ -99,7 +99,6 @@ John Collins,PF,29,Detroit Pistons,9,/player/John-Collins/Summary/83940,83940
 Zach Collins,C,28,Chicago Bulls,9,/player/Zach-Collins/Summary/85659,85659
 Mike Conley,PG,39,Boston Celtics,19,/player/Mike-Conley/Summary/33,33
 Ryan Conwell,G,22,Miami Heat,0,/player/Ryan-Conwell/Summary/199681,199681
-Carson Cooper,C,24,Memphis Grizzlies,0,/player/Carson-Cooper/Summary/176379,176379
 Quadir Copeland,F,23,Houston Rockets,0,/player/Quadir-Copeland/Summary/176107,176107
 Bilal Coulibaly,GF,22,Washington Wizards,3,/player/Bilal-Coulibaly/Summary/175550,175550
 Cedric Coward,F,23,Memphis Grizzlies,1,/player/Cedric-Coward/Summary/187064,187064
@@ -142,7 +141,6 @@ Justin Edwards,SF,22,Philadelphia Sixers,2,/player/Justin-Edwards/Summary/162788
 Zuby Ejiofor,F,22,Atlanta Hawks,0,/player/Zuby-Ejiofor/Summary/176053,176053
 Keon Ellis,F,26,Brooklyn Nets,4,/player/Keon-Ellis/Summary/136248,136248
 Joel Embiid,C,32,Philadelphia Sixers,12,/player/Joel-Embiid/Summary/49880,49880
-Tristan Enaruna,PF,25,Cleveland Cavaliers,1,/player/Tristan-Enaruna/Summary/118675,118675
 Noa Essengue,F,19,Chicago Bulls,1,/player/Noa-Essengue/Summary/188669,188669
 Isaiah Evans,G,20,Minnesota Timberwolves,0,/player/Isaiah-Evans/Summary/180095,180095
 Tacko Fall,C,30,Philadelphia Sixers,3,/player/Tacko-Fall/Summary/83961,83961
@@ -159,7 +157,7 @@ Daniel Gafford,C,28,Dallas Mavericks,7,/player/Daniel-Gafford/Summary/97090,9709
 Myron Gardner,G,25,Miami Heat,1,/player/Myron-Gardner/Summary/134269,134269
 Darius Garland,G,26,Los Angeles Clippers,7,/player/Darius-Garland/Summary/81685,81685
 Luka Garza,C,27,Boston Celtics,5,/player/Luka-Garza/Summary/105352,105352
-Keyonte George,G,22,Utah Jazz,3,/player/Keyonte-George/Summary/151235,151235
+Keyonte George,G,23,Utah Jazz,3,/player/Keyonte-George/Summary/151235,151235
 Kyshawn George,F,22,Washington Wizards,2,/player/Kyshawn-George/Summary/137573,137573
 Paul George,GF,36,Boston Celtics,16,/player/Paul-George/Summary/2305,2305
 Josh Giddey,G,24,Chicago Bulls,5,/player/Josh-Giddey/Summary/150528,150528
@@ -181,7 +179,7 @@ Jalen Green,SG,24,Phoenix Suns,5,/player/Jalen-Green/Summary/117342,117342
 Javonte Green,G,33,Detroit Pistons,7,/player/Javonte-Green/Summary/31203,31203
 Josh Green,SG,25,Utah Jazz,6,/player/Josh-Green/Summary/107565,107565
 Quentin Grimes,SG,26,Los Angeles Lakers,5,/player/Quentin-Grimes/Summary/107566,107566
-Mouhamed Gueye,F,23,Atlanta Hawks,3,/player/Mouhamed-Gueye/Summary/160946,160946
+Mouhamed Gueye,F,24,Atlanta Hawks,3,/player/Mouhamed-Gueye/Summary/160946,160946
 Rui Hachimura,F,28,Los Angeles Clippers,7,/player/Rui-Hachimura/Summary/72649,72649
 Tyrese Haliburton,PG,26,Indiana Pacers,6,/player/Tyrese-Haliburton/Summary/132168,132168
 P.J. Hall,PF,25,Charlotte Hornets,2,/player/PJ-Hall/Summary/135514,135514
@@ -308,7 +306,7 @@ C.J. McCollum,G,35,Atlanta Hawks,13,/player/CJ-McCollum/Summary/17251,17251
 T.J. McConnell,G,34,Indiana Pacers,11,/player/TJ-McConnell/Summary/22550,22550
 "Kevin McCullar, Jr.",PG,26,Toronto Raptors,2,/player/Kevin-McCullar-Jr/Summary/132445,132445
 Jaden McDaniels,F,26,Minnesota Timberwolves,6,/player/Jaden-McDaniels/Summary/132425,132425
-Bryce McGowens,GF,23,New Orleans Pelicans,4,/player/Bryce-McGowens/Summary/151325,151325
+Bryce McGowens,GF,24,New Orleans Pelicans,4,/player/Bryce-McGowens/Summary/151325,151325
 Jordan McLaughlin,G,30,San Antonio Spurs,7,/player/Jordan-McLaughlin/Summary/52558,52558
 Liam McNeeley,F,21,Charlotte Hornets,1,/player/Liam-McNeeley/Summary/182769,182769
 De'Anthony Melton,SG,28,Golden State Warriors,8,/player/DeAnthony-Melton/Summary/85714,85714
@@ -318,6 +316,7 @@ Baba Miller,C,22,Los Angeles Clippers,0,/player/Baba-Miller/Summary/165593,16559
 Brandon Miller,F,23,Charlotte Hornets,3,/player/Brandon-Miller/Summary/151234,151234
 Jordan Miller,G,26,Los Angeles Clippers,3,/player/Jordan-Miller/Summary/139875,139875
 Leonard Miller,F,22,Chicago Bulls,3,/player/Leonard-Miller/Summary/150556,150556
+Riley Minix,SF,26,Cleveland Cavaliers,2,/player/Riley-Minix/Summary/164271,164271
 Josh Minott,F,23,Brooklyn Nets,4,/player/Josh-Minott/Summary/175934,175934
 Yves Missi,C,22,New Orleans Pelicans,2,/player/Yves-Missi/Summary/188144,188144
 Ajay Mitchell,PG,24,Oklahoma City Thunder,2,/player/Ajay-Mitchell/Summary/139191,139191
@@ -416,6 +415,7 @@ Gui Santos,GF,24,Golden State Warriors,3,/player/Gui-Santos/Summary/139404,13940
 Ben Saraf,G,20,Brooklyn Nets,1,/player/Ben-Saraf/Summary/183472,183472
 Alex Sarr,FC,21,Washington Wizards,2,/player/Alex-Sarr/Summary/162806,162806
 Marcus Sasser,G,26,Dallas Mavericks,3,/player/Marcus-Sasser/Summary/148690,148690
+Richie Saunders,GF,25,Memphis Grizzlies,0,/player/Richie-Saunders/Summary/139115,139115
 Baylor Scheierman,PG,26,Boston Celtics,2,/player/Baylor-Scheierman/Summary/134595,134595
 Dennis Schroder,PG,33,Charlotte Hornets,13,/player/Dennis-Schroder/Summary/26503,26503
 Jaylin Sellers,G,24,Chicago Bulls,0,/player/Jaylin-Sellers/Summary/186593,186593
@@ -455,7 +455,6 @@ Jalen Suggs,SG,25,Orlando Magic,5,/player/Jalen-Suggs/Summary/117344,117344
 Dailyn Swain,SF,21,Chicago Bulls,0,/player/Dailyn-Swain/Summary/192066,192066
 Jae'sean Tate,F,31,Houston Rockets,6,/player/Jaesean-Tate/Summary/52353,52353
 Jayson Tatum,SF,28,Boston Celtics,9,/player/Jayson-Tatum/Summary/52034,52034
-Dalen Terry,PG,24,Oklahoma City Thunder,4,/player/Dalen-Terry/Summary/132642,132642
 Adou Thiero,G,22,Los Angeles Lakers,1,/player/Adou-Thiero/Summary/150070,150070
 Meleek Thomas,G,20,Cleveland Cavaliers,0,/player/Meleek-Thomas/Summary/196884,196884
 Amen Thompson,G,23,Houston Rockets,3,/player/Amen-Thompson/Summary/176051,176051
@@ -492,12 +491,11 @@ Jordan Walsh,F,22,Boston Celtics,3,/player/Jordan-Walsh/Summary/151494,151494
 Ja'Kobe Walter,F,22,Toronto Raptors,2,/player/JaKobe-Walter/Summary/170128,170128
 Kel'el Ware,PF,22,Milwaukee Bucks,2,/player/Kelel-Ware/Summary/149694,149694
 P.J. Washington,PF,28,Dallas Mavericks,7,/player/PJ-Washington/Summary/81703,81703
-Trendon Watford,SF,25,New Orleans Pelicans,5,/player/Trendon-Watford/Summary/104914,104914
+Trendon Watford,SF,26,New Orleans Pelicans,5,/player/Trendon-Watford/Summary/104914,104914
 Jamir Watkins,F,25,Washington Wizards,1,/player/Jamir-Watkins/Summary/169098,169098
 Peyton Watson,GF,24,Cleveland Cavaliers,4,/player/Peyton-Watson/Summary/133038,133038
 Jaylen Wells,F,23,Memphis Grizzlies,2,/player/Jaylen-Wells/Summary/188834,188834
 Victor Wembanyama,F,22,San Antonio Spurs,3,/player/Victor-Wembanyama/Summary/136048,136048
-Blake Wesley,SG,23,Los Angeles Clippers,4,/player/Blake-Wesley/Summary/131835,131835
 Coby White,PG,26,Charlotte Hornets,7,/player/Coby-White/Summary/107976,107976
 Derrick White,G,32,Boston Celtics,9,/player/Derrick-White/Summary/61344,61344
 Cam Whitmore,F,22,Denver Nuggets,3,/player/Cam-Whitmore/Summary/176080,176080
