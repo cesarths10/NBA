@@ -143,24 +143,27 @@ def fetch_html(url: str, headers=None, timeout=15) -> str:
         time.sleep(1)
     return ''
 
-# Batch fetch URLs using curl_cffi with Chrome 120 TLS fingerprinting to bypass anti-bot protections
+# Batch fetch URLs using curl_cffi with Chrome/Safari TLS fingerprinting to bypass anti-bot protections
 def fetch_htmls_curl_cffi(urls: list[str], timeout: int = 20) -> list[str]:
-    try:
-        from curl_cffi import requests as cffi_requests
-        session = cffi_requests.Session(impersonate="chrome120")
-        results = []
-        for url in urls:
-            try:
-                resp = session.get(url, timeout=timeout)
-                if resp.status_code == 200:
-                    results.append(resp.text)
-                else:
+    for target in ["chrome", "safari"]:
+        try:
+            from curl_cffi import requests as cffi_requests
+            session = cffi_requests.Session(impersonate=target)
+            results = []
+            for url in urls:
+                try:
+                    resp = session.get(url, timeout=timeout)
+                    if resp.status_code == 200:
+                        results.append(resp.text)
+                    else:
+                        results.append('')
+                except Exception:
                     results.append('')
-            except Exception:
-                results.append('')
-        return results
-    except Exception:
-        return []
+            if any(results):
+                return results
+        except Exception:
+            pass
+    return []
 
 # Fallback headless Chrome scraper using Selenium for JavaScript-rendered game log tables
 def fetch_htmls_selenium(urls: list[str], timeout: int = 30) -> list[str]:
@@ -171,7 +174,7 @@ def fetch_htmls_selenium(urls: list[str], timeout: int = 30) -> list[str]:
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     )
 
     driver = None
@@ -263,7 +266,7 @@ def scrape_boxscores_for_date(date_str: str, session=None) -> pd.DataFrame:
     if session is None:
         try:
             from curl_cffi import requests as cffi_requests
-            session = cffi_requests.Session(impersonate='chrome120')
+            session = cffi_requests.Session(impersonate='chrome')
         except ImportError:
             session = requests.Session()
 
@@ -271,6 +274,13 @@ def scrape_boxscores_for_date(date_str: str, session=None) -> pd.DataFrame:
     print(f"Fetching scoreboard for {date_str}: {url}")
     try:
         r = session.get(url, timeout=15)
+        if r.status_code == 403:
+            try:
+                from curl_cffi import requests as cffi_requests
+                session = cffi_requests.Session(impersonate='safari')
+                r = session.get(url, timeout=15)
+            except Exception:
+                pass
         if r.status_code != 200:
             print(f"Failed to fetch scoreboard for {date_str} (status {r.status_code})")
             return pd.DataFrame()
@@ -724,7 +734,7 @@ def sync_daily_stats(target_dates: list[str] = None, out_dir: str = None) -> int
 
     try:
         from curl_cffi import requests as cffi_requests
-        session = cffi_requests.Session(impersonate='chrome120')
+        session = cffi_requests.Session(impersonate='chrome')
     except ImportError:
         session = requests.Session()
 

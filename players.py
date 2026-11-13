@@ -84,23 +84,24 @@ def _parse_table_rows_from_soup(soup: BeautifulSoup) -> list[dict]:
     print("No valid player rows found in any table")
     return []
 
-# Fetch webpage HTML using curl_cffi with Chrome TLS impersonation to bypass Cloudflare
+# Fetch webpage HTML using curl_cffi with Chrome/Safari TLS impersonation to bypass Cloudflare
 def _fetch_html_curl_cffi(url: str) -> str:
-    # Safely attempt curl_cffi request with Chrome 120 browser fingerprinting
-    try:
-        from curl_cffi import requests
-        print(f"Fetching {url} using curl_cffi (Chrome impersonation)...")
-        # Impersonate modern desktop Chrome browser with 30-second timeout
-        resp = requests.get(url, impersonate="chrome120", timeout=30)
-        # Return response text if HTTP status code is 200 OK
-        if resp.status_code == 200:
-            return resp.text
-        # Log non-200 HTTP status code
-        print(f"curl_cffi returned status code: {resp.status_code}")
-    # Catch curl_cffi exceptions or connection timeouts
-    except Exception as e:
-        print(f"curl_cffi fetch failed: {e}")
-    # Return empty string if curl_cffi request failed
+    # Safely attempt curl_cffi request with modern browser fingerprinting
+    for target in ["chrome", "safari"]:
+        try:
+            from curl_cffi import requests
+            print(f"Fetching {url} using curl_cffi ({target} impersonation)...")
+            # Impersonate modern desktop browser with 30-second timeout
+            resp = requests.get(url, impersonate=target, timeout=30)
+            # Return response text if HTTP status code is 200 OK and contains tables
+            if resp.status_code == 200 and "<table" in resp.text:
+                return resp.text
+            # Log non-200 HTTP status code
+            print(f"curl_cffi ({target}) returned status code: {resp.status_code}")
+        # Catch curl_cffi exceptions or connection timeouts
+        except Exception as e:
+            print(f"curl_cffi ({target}) fetch failed: {e}")
+    # Return empty string if curl_cffi requests failed
     return ""
 
 # Fallback headless Chrome scraper using Selenium when curl_cffi is blocked or unavailable
@@ -118,7 +119,7 @@ def _scrape_with_selenium(url: str = URL) -> str:
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
         
         # Initialize Chrome driver with automated webdriver manager
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
