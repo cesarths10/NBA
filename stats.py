@@ -293,7 +293,14 @@ def scrape_boxscores_for_date(date_str: str, session=None) -> pd.DataFrame:
 
     if not box_links:
         print(f"No completed boxscores found on RealGM for {date_str}.")
-        return pd.DataFrame()
+        df_empty = pd.DataFrame()
+        az_tz = timezone(timedelta(hours=-7))
+        today_az_str = datetime.now(az_tz).strftime('%Y-%m-%d')
+        if date_str < today_az_str:
+            df_empty.attrs['is_complete'] = True
+            df_empty.attrs['parsed_games_count'] = 0
+            df_empty.attrs['total_box_links'] = 0
+        return df_empty
 
     print(f"Found {len(box_links)} completed boxscores for {date_str}. Parsing games...")
     parsed_rows = []
@@ -314,13 +321,29 @@ def scrape_boxscores_for_date(date_str: str, session=None) -> pd.DataFrame:
         elif dt.month in [4, 5, 6] and dt.day > 15:
             game_type = 'Playoffs'
 
+    parsed_games_count = 0
     for b_link in box_links:
         full_url = f"https://basketball.realgm.com{b_link}" if b_link.startswith('/') else b_link
-        try:
-            r_box = session.get(full_url, timeout=15)
-            if r_box.status_code != 200:
-                continue
-        except Exception:
+        r_box = None
+        for attempt in range(2):
+            try:
+                r_box = session.get(full_url, timeout=15)
+                if r_box.status_code == 200:
+                    break
+                elif r_box.status_code == 403:
+                    try:
+                        from curl_cffi import requests as cffi_requests
+                        session = cffi_requests.Session(impersonate='safari')
+                        r_box = session.get(full_url, timeout=15)
+                        if r_box.status_code == 200:
+                            break
+                    except Exception:
+                        pass
+            except Exception:
+                time.sleep(0.5)
+
+        if not r_box or r_box.status_code != 200:
+            print(f"Warning: Failed to fetch boxscore {full_url}")
             continue
 
         soup_box = BeautifulSoup(r_box.text, 'lxml')
@@ -461,8 +484,13 @@ def scrape_boxscores_for_date(date_str: str, session=None) -> pd.DataFrame:
 
             parsed_rows.extend(parse_team_box(t1, mascot1, mascot2, wl1))
             parsed_rows.extend(parse_team_box(t2, mascot2, mascot1, wl2))
+            parsed_games_count += 1
 
-    return pd.DataFrame(parsed_rows)
+    df = pd.DataFrame(parsed_rows)
+    df.attrs['is_complete'] = (len(box_links) > 0 and parsed_games_count == len(box_links))
+    df.attrs['parsed_games_count'] = parsed_games_count
+    df.attrs['total_box_links'] = len(box_links)
+    return df
 
 # Scrape game logs for a specific player (single season or all history)
 def process_player(player_name: str, summary_href: str, out_dir: str, season_year: str = 'All') -> pd.DataFrame:
@@ -677,57 +705,106 @@ def upsert_to_database(merged: pd.DataFrame, out_dir: str = None) -> int:
     print(f"Successfully upserted {len(records)} game logs into {db_path}.")
     return len(records)
 
-# Determine missing sync dates using Arizona local time (MST, UTC-7) and database MAX(Date)
-def get_missing_sync_dates(db_path: str, max_lookback_days: int = 5) -> list[str]:
-    # Arizona Standard Time (UTC-7, no Daylight Saving Time)
+# Initialize sync audit tables and seed completed historical dates if newly created
+def init_sync_tables(db_path: str):
+    try:
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute('''
+        CREATE TABLE IF NOT EXISTS sync_completed_dates (
+            Date TEXT PRIMARY KEY,
+            GamesCount INTEGER,
+            VerifiedAt TEXT
+        )
+        ''')
+        # If sync_completed_dates is empty, seed it with historical dates that are already complete
+        count = cur.execute("SELECT COUNT(*) FROM sync_completed_dates").fetchone()[0]
+        if count == 0:
+            az_tz = timezone(timedelta(hours=-7))
+            cutoff = (datetime.now(az_tz).date() - timedelta(days=3)).strftime('%Y-%m-%d')
+            now_iso = datetime.now(timezone.utc).isoformat()
+            cur.execute('''
+            INSERT OR IGNORE INTO sync_completed_dates (Date, GamesCount, VerifiedAt)
+            SELECT Date, COUNT(DISTINCT Team) / 2, ?
+            FROM gamelogs
+            WHERE Date <= ? AND Season = '2026-27'
+            GROUP BY Date
+            HAVING COUNT(DISTINCT Team) >= 4 AND (COUNT(DISTINCT Team) % 2) = 0
+            ''', (now_iso, cutoff))
+            conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"init_sync_tables error: {e}")
+
+# Determine missing sync dates by checking recent days and auditing the season for missing/incomplete dates
+def get_missing_sync_dates(db_path: str, recent_days_lookback: int = 3) -> list[str]:
     az_tz = timezone(timedelta(hours=-7))
     now_az = datetime.now(az_tz)
-    yesterday_az = now_az.date() - timedelta(days=1)
+    today_az = now_az.date()
+    yesterday_az = today_az - timedelta(days=1)
 
     if not os.path.exists(db_path):
         return [yesterday_az.strftime('%Y-%m-%d')]
 
-    max_date_str = None
+    init_sync_tables(db_path)
+
+    # 1. Always include the sliding recent window (last N days: [yesterday - (N-1), ..., yesterday])
+    # to catch late-night West Coast games and official NBA stat corrections
+    target_dates_set = set()
+    for offset in range(recent_days_lookback):
+        d = yesterday_az - timedelta(days=offset)
+        target_dates_set.add(d.strftime('%Y-%m-%d'))
+
+    # If running in evening (>= 18:00 MST / 20:00 EST), also check today's completed games
+    if now_az.hour >= 18:
+        target_dates_set.add(today_az.strftime('%Y-%m-%d'))
+
+    # 2. Audit the current season from database to detect any missing dates or incomplete game days
+    season_start = None
+    verified_dates = set()
     try:
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
-        res = cur.execute("SELECT MAX(Date) FROM gamelogs").fetchone()
-        max_date_str = res[0] if res else None
+
+        # Find earliest date for current season in gamelogs
+        res_min = cur.execute("SELECT MIN(Date) FROM gamelogs WHERE Season = (SELECT MAX(Season) FROM gamelogs)").fetchone()
+        if res_min and res_min[0]:
+            season_start = datetime.strptime(res_min[0], '%Y-%m-%d').date()
+
+        # Load all dates already verified as complete
+        res_ver = cur.execute("SELECT Date FROM sync_completed_dates").fetchall()
+        verified_dates = {r[0] for r in res_ver if r[0]}
         conn.close()
-    except Exception:
-        max_date_str = None
+    except Exception as e:
+        print(f"Error checking season sync status: {e}")
 
-    if not max_date_str:
-        return [yesterday_az.strftime('%Y-%m-%d')]
+    # Fallback season start if not detected
+    if not season_start:
+        season_start = datetime(2026, 10, 20).date()
 
-    try:
-        max_date = datetime.strptime(max_date_str, '%Y-%m-%d').date()
-    except ValueError:
-        return [yesterday_az.strftime('%Y-%m-%d')]
+    # 3. Queue any unverified dates in the season up to yesterday for backfilling
+    curr = season_start
+    while curr <= yesterday_az:
+        curr_str = curr.strftime('%Y-%m-%d')
+        if curr_str not in verified_dates:
+            target_dates_set.add(curr_str)
+        curr += timedelta(days=1)
 
-    dates = []
-    # If the database is already current up to yesterday, refresh yesterday to capture any late official updates
-    if max_date >= yesterday_az:
-        dates = [yesterday_az.strftime('%Y-%m-%d')]
-    else:
-        # Collect missing dates from the day after MAX(Date) up to yesterday
-        curr = max_date + timedelta(days=1)
-        earliest_allowed = yesterday_az - timedelta(days=max_lookback_days)
-        if curr < earliest_allowed:
-            curr = earliest_allowed
-        while curr <= yesterday_az:
-            dates.append(curr.strftime('%Y-%m-%d'))
-            curr += timedelta(days=1)
+    return sorted(list(target_dates_set))
 
-    return dates
-
-# Fast incremental daily stats sync using RealGM daily scoreboard boxscores
+# Fast incremental daily stats sync using RealGM daily scoreboard boxscores with self-healing audit
 def sync_daily_stats(target_dates: list[str] = None, out_dir: str = None) -> int:
     out_dir = out_dir or os.path.dirname(os.path.abspath(__file__))
     db_path = os.path.join(out_dir, 'gamelogs.db')
 
+    init_sync_tables(db_path)
+
     if not target_dates:
         target_dates = get_missing_sync_dates(db_path)
+
+    if not target_dates:
+        print("All dates in season are verified complete. Database is up to date.")
+        return 0
 
     print(f"--- Starting daily incremental stats refresh for dates: {target_dates} ---")
     all_frames = []
@@ -738,17 +815,42 @@ def sync_daily_stats(target_dates: list[str] = None, out_dir: str = None) -> int
     except ImportError:
         session = requests.Session()
 
+    az_tz = timezone(timedelta(hours=-7))
+    today_str = datetime.now(az_tz).strftime('%Y-%m-%d')
+
+    completed_to_record = []
     for date_str in target_dates:
         df_day = scrape_boxscores_for_date(date_str, session=session)
         if not df_day.empty:
             all_frames.append(df_day)
 
-    if not all_frames:
-        print("No new game logs collected for target date(s). Database is up to date.")
-        return 0
+        # If all games on RealGM were successfully scraped (or 0 games scheduled) and date is in the past:
+        if df_day.attrs.get('is_complete', False) and date_str < today_str:
+            num_games = df_day.attrs.get('parsed_games_count', 0)
+            completed_to_record.append((date_str, num_games))
 
-    combined = pd.concat(all_frames, ignore_index=True)
-    count = upsert_to_database(combined, out_dir=out_dir)
+    count = 0
+    if all_frames:
+        combined = pd.concat(all_frames, ignore_index=True)
+        count = upsert_to_database(combined, out_dir=out_dir)
+    else:
+        print("No new game logs collected for target date(s). Database is up to date.")
+
+    # Record verified complete dates in DB
+    if completed_to_record:
+        try:
+            conn = sqlite3.connect(db_path)
+            cur = conn.cursor()
+            verified_at = datetime.now(timezone.utc).isoformat()
+            cur.executemany(
+                "INSERT OR REPLACE INTO sync_completed_dates (Date, GamesCount, VerifiedAt) VALUES (?, ?, ?)",
+                [(d, n, verified_at) for d, n in completed_to_record]
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Warning: Failed to update sync_completed_dates: {e}")
+
     return count
 
 # Fallback player-by-player scraper orchestration for specific season or full historical backfill
